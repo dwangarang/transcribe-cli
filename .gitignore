@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+# Local config and outputs — never commit these
+.whisperx_config
+whisperx_log.txt
+*.txt
+!requirements*.txt
+*.mp3
+*.m4a
+*.wav

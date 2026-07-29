@@ -1,0 +1,24 @@
+# WhisperX Configuration
+# Edit these values to change transcription behavior
+
+# Language of the audio: en, zh, or auto.
+# Do NOT leave this on auto — Whisper guesses from the first 30 seconds and has
+# misdetected accented English as Nynorsk/Danish. Override per-file with:
+#   transcribe file.mp3 zh
+LANGUAGE="en"
+MIN_SPEAKERS=1            # Minimum number of speakers in the audio
+MAX_SPEAKERS=4            # Maximum number of speakers in the audio
+OUTPUT_DIR="$HOME/Downloads"
+
+# Whisper model. large-v3-turbo is ~9x faster than large-v3 with no meaningful
+# quality difference. large-v3-turbo-q4 is faster again but slightly wobblier.
+export WHISPER_MODEL="mlx-community/whisper-large-v3-turbo"
+
+# The Hugging Face token is deliberately NOT loaded here. ~/.transcribe_mlx.py
+# reads it straight from the Keychain when it needs it. Keeping it out of the
+# shell means it can't leak into the process list or the log file.
+#
+# To replace the stored token:
+#   security delete-generic-password -a "$USER" -s huggingface_token
+#   security add-generic-password -a "$USER" -s huggingface_token -w
+
