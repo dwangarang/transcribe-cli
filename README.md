@@ -50,9 +50,23 @@ The parts that took the most thought:
 - **Don't leave `auto` on.** Whisper guesses language from the first 30 seconds and has confidently misread accented English as Nynorsk. The config defaults to an explicit language with a per-run override.
 - **`noglob` on the `yt` alias.** YouTube URLs contain `?` and `&`, which zsh will otherwise try to expand into filenames.
 
+## What you need before you start
+
+Everything here is free. There is no paid service and no account with me.
+
+| Requirement | Needed for | Notes |
+|---|---|---|
+| macOS on Apple Silicon | `transcribe` | The GPU path uses Metal. On an Intel Mac it falls back to CPU and runs roughly 5x slower. `yt` works anywhere Python does. |
+| Python 3.9+ | both | Free |
+| `ffmpeg`, `yt-dlp` | both | Free, via Homebrew |
+| A [Hugging Face](https://huggingface.co) account | `transcribe` only | Free. You also have to accept the model terms, see step 3. |
+| ~3 GB of disk | `transcribe` | Whisper and pyannote download on first run |
+
+`yt` needs no account at all. If you only want YouTube transcripts, skip the Hugging Face steps entirely.
+
 ## Setup
 
-**Requirements:** macOS on Apple Silicon (for the GPU path), Python 3.9+, `ffmpeg`, `yt-dlp`.
+**Requirements:** Python 3.9+, `ffmpeg`, `yt-dlp`.
 
 ```bash
 brew install ffmpeg yt-dlp
