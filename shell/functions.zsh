@@ -82,7 +82,8 @@ logwatch() {
 }
 _yt() {
   if [[ -z "$1" ]]; then
-    echo "Usage: yt <youtube_url> [--workers N] [--output-dir DIR]"
+    echo "Usage: yt <youtube_url> [--workers N] [--delay SECONDS] [--output-dir DIR]"
+    echo "Playlist/channel scoping: [--limit 30|25%] [--select newest|oldest|random] [--all] [--list]"
     return 1
   fi
   python3 "${TRANSCRIBE_CLI_HOME:-$HOME/transcribe-cli}/transcribe_youtube.py" "$@"

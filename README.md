@@ -15,10 +15,31 @@ Both run locally. The audio-file path never uploads anything — Whisper and the
 
 `transcribe_youtube.py` takes any YouTube video, playlist, or channel URL and writes one text file per video.
 
-It tries the cheap path first: if the video already has captions, `youtube_transcript_api` fetches them instantly with no download. Only when that fails does it fall back to downloading the audio with `yt-dlp` and running `faster-whisper` locally. Videos are processed in a thread pool (default 4 workers), and anything already transcribed is skipped, so re-running against a growing channel only does the new work.
+It tries the cheap path first: if the video already has captions, `yt-dlp` fetches them instantly with no audio download. `youtube_transcript_api` is the second string, and only when both come up empty does it download the audio and run `faster-whisper` locally. Videos are processed in a thread pool (default 2 workers), and anything already transcribed is skipped, so re-running against a growing channel only does the new work.
+
+Each transcript is written as `YYYY-MM-DD_Title_VIDEOID.txt`, upload date first, so an ordinary alphabetical file listing is also chronological. The same date is repeated in the file header.
 
 ```bash
-yt <url> [--workers N] [--output-dir DIR] [--whisper-model tiny|base|small|medium]
+yt <url> [--workers N] [--delay SECONDS] [--output-dir DIR]
+         [--whisper-model tiny|base|small|medium]
+         [--limit N] [--select newest|oldest|random] [--all] [--list]
+```
+
+**Scoping a playlist or channel.** A single video URL transcribes that one video and asks nothing. A playlist or channel URL reports how many videos it found and asks how much of it you want, answered as a count, a percentage, or `all`:
+
+```
+This page has 726 videos.
+How many do you want to transcribe?
+  a count (30), a percentage (25%), or 'all'. Enter defaults to all.
+```
+
+Pass the answer up front to skip the question, which is also what non-interactive runs need:
+
+```bash
+yt <page_url> --limit 30              # newest 30
+yt <page_url> --limit 10%             # newest tenth
+yt <page_url> --limit 10 --select oldest
+yt <page_url> --list                  # count and list, transcribe nothing
 ```
 
 ### `transcribe` — local audio with speaker labels
@@ -49,6 +70,11 @@ The parts that took the most thought:
 - **Overlap-weighted speaker assignment.** Naively tagging a transcript segment with whichever diarization turn it starts inside gets crosstalk wrong. `assign_speakers` instead totals overlap duration per speaker across all turns touching the segment, so someone split across several short turns still wins over one long turn that barely grazes it.
 - **Don't leave `auto` on.** Whisper guesses language from the first 30 seconds and has confidently misread accented English as Nynorsk. The config defaults to an explicit language with a per-run override.
 - **`noglob` on the `yt` alias.** YouTube URLs contain `?` and `&`, which zsh will otherwise try to expand into filenames.
+- **Pull captions with `yt-dlp`, not the transcript API.** Fetching 73 videos through `youtube_transcript_api` got the IP blocked partway in: 23 succeeded, 50 returned `RequestBlocked`. The cause is the endpoint, not the volume. That library calls a legacy `timedtext` URL that YouTube throttles hard, while `yt-dlp` goes through the player API impersonating a real client. Same captions, far higher ceiling. Re-running the identical batch through `yt-dlp` finished 73 of 73 with no block. Parallelism and backoff were treated as the fix at first, and they were the wrong lever.
+- **`json3` over `vtt` for captions.** Auto-generated `vtt` repeats each line in the following cue to produce the rolling-subtitle effect, so a naive parse duplicates most of the transcript. `json3` returns clean timestamped segments and needs no de-duplication.
+- **`--sub-langs en,en-orig`, never `en.*`.** The wildcard also matches auto-translated tracks (`en-ar`, `en-es`, and so on). On a heavily translated video that turns one request into dozens, which trips the exact 429 the `yt-dlp` path exists to avoid. Worse, the resulting error aborted the call before the metadata file was written, so the upload date silently came back empty. A greedy pattern in one flag was undoing the fix in another.
+- **Retry only what a retry can fix.** A rate-limit block and a video with no captions both surface as "no text". Retrying the first is correct and retrying the second wastes request budget, making the first more likely, so the error text is matched to tell them apart before any backoff.
+- **Resume by video ID, not by filename.** Output files are named with the upload date, which isn't known until after the fetch. Matching an existing file on the ID instead keeps the skip-already-done behaviour working when a blocked batch is re-run.
 
 ## What you need before you start
 
